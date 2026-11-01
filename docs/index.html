@@ -1,0 +1,121 @@
+﻿<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#081b4b">
+  <meta name="description" content="Petal Clock brings a floating, HyperOS-inspired clock animation to Android. Explore the interactive live wallpaper demo, custom bubble digits and blue petal artwork. No root required.">
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="Petal Clock — A clock that blooms">
+  <meta property="og:description" content="A blue petal live wallpaper with floating, animated clock digits. Designed for Android, no root required.">
+  <meta property="og:image" content="https://petalclock.houseli.site/assets/icon.png">
+  <title>Petal Clock — A clock that blooms</title>
+  <link rel="icon" type="image/png" sizes="512x512" href="assets/icon.png">
+  <link rel="icon" href="favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="assets/apple-touch-icon.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Figtree:wght@400;500;600;700;800&family=Unbounded:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css">
+  <script defer src="app.js"></script>
+</head>
+<body>
+  <svg class="svg-library" aria-hidden="true" xmlns="http://www.w3.org/2000/svg">
+    <symbol id="icon-arrow" viewBox="0 0 24 24"><path d="M5 12h14m-7-7 7 7-7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-play" viewBox="0 0 24 24"><path d="m8 5 11 7-11 7V5Z" fill="currentColor"/></symbol>
+    <symbol id="icon-moon" viewBox="0 0 24 24"><path d="M20 14.2A8.2 8.2 0 0 1 9.8 4a7.5 7.5 0 1 0 10.2 10.2Z" fill="currentColor"/></symbol>
+    <symbol id="icon-sun" viewBox="0 0 24 24"><circle cx="12" cy="12" r="4" fill="none" stroke="currentColor" stroke-width="1.8"/><path d="M12 2v2m0 16v2M2 12h2m16 0h2M4.9 4.9l1.5 1.5m11.2 11.2 1.5 1.5m0-14.2-1.5 1.5M6.4 17.6l-1.5 1.5" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/></symbol>
+    <symbol id="icon-download" viewBox="0 0 24 24"><path d="M12 3v12m-5-5 5 5 5-5M4 20h16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-github" viewBox="0 0 24 24"><path d="M9 19c-4 1.4-4-2-5.5-2.5M20 15.7c0-1.2-.4-2.1-1.3-2.8.3-.8.5-2.1-.1-3.3 0 0-1-.2-3.3 1.5a11 11 0 0 0-6.6 0C6.4 9.4 5.4 9.6 5.4 9.6c-.6 1.2-.4 2.5-.1 3.3C4.4 13.6 4 14.5 4 15.7c0 4.1 3 4.8 8 4.8s8-.7 8-4.8Z" transform="translate(0,-3)" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-sparkle" viewBox="0 0 24 24"><path d="m12 2 2.2 7.8L22 12l-7.8 2.2L12 22l-2.2-7.8L2 12l7.8-2.2L12 2Z" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-touch" viewBox="0 0 24 24"><path d="M9 11V5a2 2 0 0 1 4 0v9l1.4-1.4a1.9 1.9 0 0 1 2.7 0l2.1 2.1a3 3 0 0 1 .8 2.2V19a3 3 0 0 1-3 3h-5a4 4 0 0 1-3-1.3L5 16.3a2 2 0 0 1 2.9-2.7L9 15" stroke="currentColor" fill="none" stroke-width="1.7" stroke-linejoin="round" stroke-linecap="round"/></symbol>
+    <symbol id="icon-shield" viewBox="0 0 24 24"><path d="m12 2 9 4v5c0 6-4.3 9.8-9 11-4.7-1.2-9-5-9-11V6l9-4Z" fill="none" stroke="currentColor" stroke-width="1.7"/><path d="m8 12 2.6 2.6L16 9" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-chevron" viewBox="0 0 24 24"><path d="m6 9 6 6 6-6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+    <symbol id="icon-check" viewBox="0 0 24 24"><path d="m4 12 5 5L20 6" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round"/></symbol>
+  </svg>
+
+  <header class="site-header" id="top">
+    <div class="container header-row">
+      <a href="#top" class="brand" aria-label="Petal Clock home"><span class="brand-icon" aria-hidden="true"><img src="assets/icon.png" alt="" width="42" height="42" style="border-radius:11px"></span><span>Petal<span class="brand-strong">Clock</span></span></a>
+      <nav aria-label="Main navigation" class="desktop-nav"><a href="#experience">Experience</a><a href="#features">Features</a><a href="#install">Installation</a><a href="#faq">FAQ</a></nav>
+      <a class="header-link" href="#download">Download <svg><use href="#icon-download"/></svg></a>
+    </div>
+  </header>
+
+  <main>
+    <section class="hero" aria-labelledby="hero-title">
+      <div class="hero-orb orb-one" aria-hidden="true"></div><div class="hero-orb orb-two" aria-hidden="true"></div>
+      <div class="container hero-layout">
+        <div class="hero-copy">
+          <div class="eyebrow"><span class="eyebrow-dot"></span> A NEW KIND OF LIVE WALLPAPER <span class="eyebrow-line"></span> ANDROID</div>
+          <h1 id="hero-title">A clock<br>that <span class="shimmer-text">blooms.</span></h1>
+          <p class="hero-description">Soft, floating numbers. Blue petals that come alive. A HyperOS-inspired lock screen moment, recreated for Android.</p>
+          <div class="hero-tags"><span>✦ Free</span><span>◌ No root required</span><span>✧ No ads, no account</span></div>
+          <div class="hero-buttons"><a href="https://github.com/Houssam-2021/PetalClock/releases/latest/download/PetalClock.apk" class="button button-primary button-download" download><svg><use href="#icon-download"/></svg> Download PetalClock</a><a href="#install" class="button button-outline">How to install <svg><use href="#icon-arrow"/></svg></a></div>
+          <p class="hero-disclaimer">Free for Android 12 or newer · APK file, about 8 MB · Not on Google Play</p>
+        </div>
+        <div class="hero-stage" id="experience">
+          <div class="stage-glow"></div>
+          <div class="stage-label top-label"><span class="signal"></span> INTERACTIVE PREVIEW <span>01 / 02</span></div>
+          <div class="phone-wrap">
+            <div class="phone" id="phone-demo" role="img" aria-label="Interactive preview of the Petal Clock live wallpaper" data-state="lock">
+              <div class="phone-camera"></div>
+              <div class="screen has-video">
+                <div class="wallpaper"></div>
+                <div class="wallpaper-vignette"></div>
+                <video class="screen-video" src="assets/live-wallpaper-picker.mp4" autoplay muted loop playsinline aria-hidden="true"></video>
+                <div class="screen-status"><span class="status-time" id="status-time">09:41</span><span class="status-icons"><svg viewBox="0 0 48 16" aria-hidden="true"><path d="M2 12 9 5l7 7M17 12 24 5l7 7" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><path d="M33 4h11v9H33z" fill="none" stroke="currentColor" stroke-width="1.5"/><path d="M44 7h2v3h-2z" fill="currentColor"/><rect x="35" y="6" width="7" height="5" rx="1" fill="currentColor"/></svg></span></div>
+                <div class="date-lock" id="date-lock">Sunday, November 1</div>
+                <div class="clock-digit" data-digit-index="0"></div><div class="clock-digit" data-digit-index="1"></div><div class="clock-digit" data-digit-index="2"></div><div class="clock-digit" data-digit-index="3"></div>
+                <div class="clock-dot" data-dot="0"></div><div class="clock-dot" data-dot="1"></div>
+                <div class="aod-footer" id="aod-footer"><span id="aod-date">Sun, Nov 1</span><span class="aod-battery">▯ 64%</span></div>
+                <div class="lock-bottom"><span class="lock-shortcut"><svg viewBox="0 0 24 24"><path d="m8 3-3 9h5l-2 9 11-12h-6l3-6H8Z" fill="currentColor"/></svg></span><div class="fingerprint"><span></span></div><span class="lock-shortcut"><svg viewBox="0 0 24 24"><path d="M7 5h10l1.8 3H21v12H3V8h2.2L7 5Z" fill="none" stroke="currentColor" stroke-width="1.5"/><circle cx="12" cy="13.5" r="3.3" fill="none" stroke="currentColor" stroke-width="1.5"/></svg></span></div>
+              </div>
+              <div class="phone-shine"></div>
+            </div>
+          </div>
+          <div class="demo-controls" aria-label="Clock simulation controls"><button type="button" id="wake-btn" class="demo-btn is-active" aria-pressed="true"><svg><use href="#icon-sun"/></svg> Wake</button><button type="button" id="sleep-btn" class="demo-btn" aria-pressed="false"><svg><use href="#icon-moon"/></svg> Sleep</button><button type="button" id="replay-btn" class="demo-btn demo-replay"><svg><use href="#icon-play"/></svg> Replay</button></div>
+          <p class="demo-caption">Tap Wake / Sleep to preview the transition. This is a browser simulation, not a recording of the installed app.</p>
+          <div class="stage-label bottom-label"><span>BUILT WITH CURVES, NOT JUST A FONT</span><span>↗</span></div>
+        </div>
+      </div>
+      <div class="hero-bottomline"><div class="container hero-bottom-inner"><span>MADE FOR THE MOMENT YOU WAKE YOUR SCREEN</span><span class="tiny-stars">✳ &nbsp; ✳ &nbsp; ✳</span></div></div>
+    </section>
+
+    <section class="statement section-space" aria-label="Introduction"><div class="container"><p class="statement-label">THE IDEA</p><h2>More than checking the time.<br><span>It's how the screen comes alive.</span></h2><div class="statement-bottom"><p>Inspired by the magic of HyperOS's animated clock, reimagined as a standalone Android live wallpaper. No root. No system modification. Just a little bit of motion.</p><span class="statement-glyph">✳</span></div></div></section>
+
+    <section class="features section-space" id="features"><div class="container"><div class="section-head"><div><div class="section-kicker">01 / THE DETAILS</div><h2>Made to feel<br>like <em>magic.</em></h2></div><p>Everything from the shape of a number to the softness of its glow has a part to play.</p></div>
+      <div class="feature-grid">
+        <article class="feature-card card-visual"><span class="feature-index">01 — ANIMATION</span><div class="mini-art mini-blue"><div class="mini-digits"><span>0</span><span>6</span><i>:</i><span>0</span><span>4</span></div><div class="mini-glow"></div></div><div class="feature-bottom"><h3>Wake beautifully.</h3><p>Thin outlines grow into floating, softly blurred numbers as the wallpaper fades into view.</p></div></article>
+        <article class="feature-card"><span class="feature-index">02 — TYPOGRAPHY</span><div class="feature-icon-round"><svg><use href="#icon-sparkle"/></svg></div><h3>Not your usual digits.</h3><p>Custom-drawn bubble-like number shapes, curved inner slits and carefully placed blue dots.</p><div class="feature-foot">10 individually designed glyphs <span>↗</span></div></article>
+        <article class="feature-card"><span class="feature-index">03 — ARTWORK</span><div class="feature-icon-round teal"><svg><use href="#icon-touch"/></svg></div><h3>Petals in every shade.</h3><p>Deep blue, icy cyan and rich teal petals give the clock a soft, dimensional backdrop.</p><div class="feature-foot">Original artwork from the app <span>↗</span></div></article>
+      </div>
+    </div></section>
+
+    <section class="showcase section-space" id="preview"><div class="container"><div class="section-head showcase-head"><div><div class="section-kicker">02 / FROM DARK TO LIGHT</div><h2>One clock.<br><em>Every moment.</em></h2></div><p>A glimpse of how Petal Clock looks as your screen wakes up.</p></div>
+      <div class="shot-grid">
+        <figure class="shot-card"><div class="shot-visual"><img src="assets/aod.webp" alt="Project design preview of the small outlined clock on a dark AOD-style background" loading="lazy"></div><figcaption><span>01</span><div><strong>Before the wake</strong><small>Thin outlines, quiet glow</small></div></figcaption></figure>
+        <figure class="shot-card"><div class="shot-visual"><img src="assets/mid-wake.webp" alt="Project design preview showing the digits transforming and the blue petal wallpaper emerging" loading="lazy"></div><figcaption><span>02</span><div><strong>Coming to life</strong><small>Bloom, blur, motion</small></div></figcaption></figure>
+        <figure class="shot-card"><div class="shot-visual"><img src="assets/settled.webp" alt="Project design preview of the large white and pale lavender floating digits on blue petals" loading="lazy"></div><figcaption><span>03</span><div><strong>Fully awake</strong><small>Soft, floating time</small></div></figcaption></figure>
+      </div><p class="showcase-caption">These are illustrative renders. The look on your phone can vary slightly by device.</p>
+    </div></section>
+
+    <section class="setup section-space" id="install"><div class="container"><div class="setup-layout"><div class="setup-heading"><div class="section-kicker">03 / GETTING STARTED</div><h2>Just a few steps<br><em>to make it yours.</em></h2><p>It takes about a minute. Your phone will ask for a permission the first time, because the app is not from Google Play.</p><div class="status-card"><span class="status-indicator"></span><div><strong>Early version</strong><p>Tested on Android 14 · feedback is welcome on GitHub</p></div></div></div><div class="steps-list"><div class="step"><span class="step-num">01</span><div><h3>Download the app</h3><p>Tap the big <strong>Download PetalClock</strong> button on your Android phone. If your browser warns that this type of file can harm your device, choose <em>Download anyway</em>.</p></div></div><div class="step"><span class="step-num">02</span><div><h3>Install it</h3><p>Open the downloaded file <code>PetalClock.apk</code>. If Android asks, tap <em>Settings</em> and allow installs from this browser, then go back and tap <em>Install</em>.</p></div></div><div class="step"><span class="step-num">03</span><div><h3>Set it as your wallpaper</h3><p>Open Petal Clock, tap <em>Set as wallpaper</em>, then choose <em>Home screen and lock screen</em>.</p></div></div></div></div></div></section>
+
+    <section class="download-section" id="download"><div class="container"><div class="download-panel"><div class="download-decoration" aria-hidden="true"><span></span><span></span><span></span></div><div class="download-copy"><div class="section-kicker light">04 / YOUR SCREEN, REIMAGINED</div><h2>Ready for<br>a little <em>wonder?</em></h2><p>Get Petal Clock for free. One tap, no account, no ads.</p><div class="download-actions"><a class="button button-primary button-download" href="https://github.com/Houssam-2021/PetalClock/releases/latest/download/PetalClock.apk" download><svg><use href="#icon-download"/></svg> Download PetalClock for Android</a><a class="button button-outline" href="https://github.com/Houssam-2021/PetalClock" target="_blank" rel="noopener"><svg><use href="#icon-github"/></svg> Source code</a></div><p class="download-fine">Free · Android 12 or newer · No root required · Open source on GitHub</p></div><div class="download-flower" aria-hidden="true"><i></i><i></i><i></i><i></i><span>✳</span></div></div></div></section>
+
+    <section class="faq-section section-space" id="faq"><div class="container"><div class="section-head"><div><div class="section-kicker">05 / GOOD TO KNOW</div><h2>Questions, <em>answered.</em></h2></div></div><div class="faq-list">
+      <details><summary>Is Petal Clock free?<svg><use href="#icon-chevron"/></svg></summary><p>Yes, completely free. There are no ads and no account.</p></details>
+      <details><summary>Why does my phone warn me when I install it?<svg><use href="#icon-chevron"/></svg></summary><p>Petal Clock is not on Google Play, so Android shows a standard warning for any app installed from a file. You can read every line of the code on GitHub.</p></details>
+      <details><summary>Does it need root or special system changes?<svg><use href="#icon-chevron"/></svg></summary><p>No. Petal Clock is a normal Android live wallpaper. It does not touch system files or security settings.</p></details>
+      <details><summary>Does it replace Samsung's Always On Display?<svg><use href="#icon-chevron"/></svg></summary><p>No. Samsung's always-on screen is controlled by the system. Petal Clock draws its outlined-clock look only while the wallpaper is visible.</p></details>
+      <details><summary>Which Android versions work?<svg><use href="#icon-chevron"/></svg></summary><p>Android 12 or newer. It has been tested on Android 14.</p></details>
+      <details><summary>Does it show my real time?<svg><use href="#icon-chevron"/></svg></summary><p>Yes. It reads your phone's clock and updates every minute.</p></details>
+      <details><summary>How do I remove it?<svg><use href="#icon-chevron"/></svg></summary><p>Change your wallpaper in Settings, then uninstall Petal Clock like any other app.</p></details>
+      <details><summary>Is the download safe?<svg><use href="#icon-chevron"/></svg></summary><p>Only download from this site or the official GitHub page. Do not install copies from other websites.</p></details>
+    </div></div></section>
+  </main>
+
+  <footer class="footer"><div class="container footer-top"><a href="#top" class="brand footer-brand"><span class="brand-icon" aria-hidden="true"><img src="assets/icon.png" alt="" width="42" height="42" style="border-radius:11px"></span><span>Petal<span class="brand-strong">Clock</span></span></a><p>Designed to make a moment feel a little more magical.</p><a href="#top" class="back-top">Back to top ↑</a></div><div class="container footer-bottom"><span>© <span id="copyright-year">2026</span> Petal Clock · A project by Houssam</span><div><a href="privacy.html">Privacy</a><a href="https://github.com/Houssam-2021/PetalClock" target="_blank" rel="noopener">GitHub ↗</a><a href="https://houseli.site/" target="_blank" rel="noopener">Other projects ↗</a></div></div></footer>
+</body>
+</html>
