@@ -6,3 +6,5 @@ local.properties
 .kotlin/
 .wrangler
 node_modules
+keystore.properties
+*.jks
