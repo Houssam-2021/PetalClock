@@ -37,7 +37,7 @@ class FingerprintFx {
             radius = r,
             distort = smooth(t / 0.03f) * (1f - smooth((t - 0.14f) / 0.20f)),
             blur = smooth(t / 0.04f) * (1f - smooth((t - 0.10f) / 0.22f)),
-            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.14f) / 0.09f)),
+            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.13f) / 0.09f)),
         )
     }
 
@@ -82,7 +82,7 @@ uniform float colorA;   // dispersion band strength
 uniform float stripH;   // px, height of the two colour lobes
 uniform float time;     // seconds, drives the liquid swirl inside the lens
 
-const float BAND = 0.15;   // uv width of the dispersion band
+const float BAND = 0.11;   // uv width of the dispersion band
 const float SWELL = 0.26;  // uv width of the swell behind the front
 
 float4 src(float2 p) {
@@ -124,11 +124,11 @@ float4 wave(float2 p) {
     // swell: the picture just behind the front is pushed outward
     float x = (waveR - d) / SWELL;
     float swell = (x > 0.0 && x < 1.0) ? sin(3.14159265 * x) * (1.0 - x) * 1.77 : 0.0;
-    float2 q = p - dpx * (0.038 * distA * swell);
+    float2 q = p - dpx * (0.040 * distA * swell);
 
-    // zoom blur inside the wave, streak length growing with the distance from the finger
-    float inside = 1.0 - smoothstep(-0.05, 0.03, d - waveR);
-    float len = blurA * inside * min(d, 0.5) * 0.24;
+    // zoom blur in a band behind the front (the middle stays sharp), streaks growing with the distance
+    float inside = (1.0 - smoothstep(-0.05, 0.03, d - waveR)) * smoothstep(waveR - 0.30, waveR - 0.04, d);
+    float len = blurA * inside * min(d, 0.5) * 0.10;
     float4 col;
     if (len * res.x > 0.75) {
         float4 acc = float4(0.0);
@@ -141,7 +141,7 @@ float4 wave(float2 p) {
     }
 
     // colour fringing on every edge inside the wave (red pushed out, blue pulled in)
-    float ca = 0.016 * blurA * inside;
+    float ca = 0.005 * blurA * inside;
     if (ca * res.x > 0.75) {
         col.r = mix(col.r, src(q + dpx * ca).r, 0.85);
         col.b = mix(col.b, src(q - dpx * ca).b, 0.85);
@@ -152,13 +152,12 @@ float4 wave(float2 p) {
         float s = (waveR - d) / BAND;
         if (s > 0.0 && s < 1.25) {
             float dy = (p.y - fp.y) / stripH;
-            float w = min(1.0, 1.2 * colorA * exp(-dy * dy));
-            float sh = 0.018 * w;
+            float w = min(1.0, colorA * exp(-dy * dy));
+            float sh = 0.008 * w;
             col.r = mix(col.r, src(q + dpx * sh).r, w);
             col.b = mix(col.b, src(q - dpx * sh).b, w);
             float4 t = tint(s);
             col.rgb = mix(col.rgb, t.rgb, t.a * w);
-            col.rgb += t.rgb * (t.a * w * 0.12);   // the band glows, so it reads on dark and blue wallpapers too
         }
     }
     return col;
