@@ -17,9 +17,10 @@ import androidx.annotation.RequiresApi
  *  - behind the front the picture is zoom blurred along the ray from the finger and swollen outward;
  *  - a dispersion band (leading edge yellow -> pale cyan -> azure -> deep blue at the trailing edge) shows as two
  *    lobes level with the fingerprint, on its left and right;
- *  - the lens magnifies about 1.2x and folds the picture over at the rim; inside it the picture is stirred by a
+ *  - the lens magnifies about 1.3x and folds the picture over at the rim; inside it the picture is stirred by a
  *    liquid swirl whose centre keeps drifting around (from the user's close-up recording of the lens);
- *  - the rim is a dark blue band, a thin cold white edge and a faint warm halo just outside.
+ *  - the rim is a dark blue band, a thin cold white edge and a faint warm halo just outside; its chromatic sheen
+ *    and glints turn around the lens (about one turn every 4.5 s).
  */
 @RequiresApi(33)
 class FingerprintFx {
@@ -36,7 +37,7 @@ class FingerprintFx {
             radius = r,
             distort = smooth(t / 0.03f) * (1f - smooth((t - 0.14f) / 0.20f)),
             blur = smooth(t / 0.04f) * (1f - smooth((t - 0.10f) / 0.22f)),
-            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.13f) / 0.09f)),
+            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.16f) / 0.09f)),
         )
     }
 
@@ -90,17 +91,17 @@ float4 src(float2 p) {
 
 // s = 0 at the leading edge of the band, 1.25 at its trailing edge. rgb + alpha.
 float4 tint(float s) {
-    float4 k0 = float4(0.91, 0.74, 0.17, 0.00);
-    float4 k1 = float4(0.91, 0.74, 0.17, 0.35);
-    float4 k2 = float4(0.91, 0.83, 0.33, 0.50);
-    float4 k3 = float4(0.84, 0.91, 0.55, 0.62);
-    float4 k4 = float4(0.67, 0.91, 0.73, 0.75);
-    float4 k5 = float4(0.31, 0.76, 0.78, 0.80);
-    float4 k6 = float4(0.10, 0.57, 0.84, 0.86);
-    float4 k7 = float4(0.05, 0.39, 0.92, 0.90);
-    float4 k8 = float4(0.05, 0.27, 0.78, 0.80);
-    float4 k9 = float4(0.12, 0.24, 0.47, 0.45);
-    float4 k10 = float4(0.12, 0.24, 0.47, 0.00);
+    float4 k0 = float4(0.95, 0.80, 0.25, 0.00);
+    float4 k1 = float4(0.98, 0.82, 0.30, 0.62);
+    float4 k2 = float4(1.00, 0.92, 0.45, 0.88);
+    float4 k3 = float4(0.92, 1.00, 0.70, 1.00);
+    float4 k4 = float4(0.75, 1.00, 0.90, 1.00);
+    float4 k5 = float4(0.35, 0.90, 1.00, 1.00);
+    float4 k6 = float4(0.12, 0.62, 1.00, 1.00);
+    float4 k7 = float4(0.06, 0.40, 1.00, 1.00);
+    float4 k8 = float4(0.10, 0.25, 0.85, 1.00);
+    float4 k9 = float4(0.20, 0.20, 0.55, 0.62);
+    float4 k10 = float4(0.20, 0.20, 0.55, 0.00);
     if (s < 0.10) return mix(k0, k1, s / 0.10);
     if (s < 0.25) return mix(k1, k2, (s - 0.10) / 0.15);
     if (s < 0.38) return mix(k2, k3, (s - 0.25) / 0.13);
@@ -123,7 +124,7 @@ float4 wave(float2 p) {
     // swell: the picture just behind the front is pushed outward
     float x = (waveR - d) / SWELL;
     float swell = (x > 0.0 && x < 1.0) ? sin(3.14159265 * x) * (1.0 - x) * 1.77 : 0.0;
-    float2 q = p - dpx * (0.030 * distA * swell);
+    float2 q = p - dpx * (0.050 * distA * swell);
 
     // zoom blur inside the wave, streak length growing with the distance from the finger
     float inside = 1.0 - smoothstep(-0.05, 0.03, d - waveR);
@@ -140,7 +141,7 @@ float4 wave(float2 p) {
     }
 
     // colour fringing on every edge inside the wave (red pushed out, blue pulled in)
-    float ca = 0.012 * blurA * inside;
+    float ca = 0.022 * blurA * inside;
     if (ca * res.x > 0.75) {
         col.r = mix(col.r, src(q + dpx * ca).r, 0.85);
         col.b = mix(col.b, src(q - dpx * ca).b, 0.85);
@@ -151,12 +152,13 @@ float4 wave(float2 p) {
         float s = (waveR - d) / BAND;
         if (s > 0.0 && s < 1.25) {
             float dy = (p.y - fp.y) / stripH;
-            float w = colorA * exp(-dy * dy);
+            float w = min(1.0, 1.6 * colorA * exp(-dy * dy));
             float sh = 0.018 * w;
             col.r = mix(col.r, src(q + dpx * sh).r, w);
             col.b = mix(col.b, src(q - dpx * sh).b, w);
             float4 t = tint(s);
             col.rgb = mix(col.rgb, t.rgb, t.a * w);
+            col.rgb += t.rgb * (t.a * w * 0.28);   // the band glows, so it reads on dark and blue wallpapers too
         }
     }
     return col;
@@ -184,25 +186,30 @@ half4 main(float2 p) {
     float r = d / lensR;
     float rc = min(r, 1.0);
     float2 n = d > 0.0 ? v / d : float2(0.0, -1.0);
-    float seg = 0.5 + 0.5 * sin(atan(n.y, n.x) * 7.0 + time * 0.6);   // the rim glints in segments
+    // the chromatic rim turns: three bright glints and a rainbow sheen, about one turn every 4.5 s
+    float spin = atan(n.y, n.x) - time * 1.4;
+    float seg = 0.5 + 0.5 * sin(spin * 3.0);
+    seg = seg * seg * (3.0 - 2.0 * seg);
+    float3 irid = 0.5 + 0.5 * cos(float3(0.0, 2.1, 4.2) + spin * 2.0);
 
     // faint warm halo just outside the rim
     if (r > 1.0) {
         float halo = (1.0 - smoothstep(1.0, 1.08, r)) * lensA;
-        base.rgb = clamp(base.rgb + float3(0.09, 0.07, -0.03) * halo, 0.0, 1.0);
+        float3 haloCol = mix(float3(0.09, 0.07, -0.03), (irid - 0.35) * 0.22, 0.6);
+        base.rgb = clamp(base.rgb + haloCol * halo * (0.6 + 0.8 * seg), 0.0, 1.0);
         if (d > lensR + 1.5) return half4(base);
     }
 
-    // magnify ~1.2x in the middle and fold the picture over in a thin band at the rim
-    float m = 0.82 - 0.22 * rc * rc * rc * rc * rc;
+    // magnify ~1.3x in the middle and fold the picture over in a thin band at the rim
+    float m = 0.78 - 0.22 * rc * rc * rc * rc * rc;
     float2 pl = fp + v * m;
 
     // liquid swirl: two vortices whose centres drift inside the lens; the rim keeps a clean refraction
     float calm = 1.0 - smoothstep(0.62, 0.92, rc);
     float2 c1 = fp + lensR * 0.34 * float2(sin(time * 1.7 + 0.7) * cos(time * 0.6), sin(time * 1.3 + 2.1));
     float2 c2 = fp + lensR * 0.36 * float2(cos(time * 1.1 + 4.0), sin(time * 1.9 + 0.3) * cos(time * 0.5 + 1.0));
-    float a1 = (1.35 + 0.5 * sin(time * 1.1)) * calm;
-    float a2 = (-0.9 + 0.4 * sin(time * 0.9 + 1.3)) * calm;
+    float a1 = (1.8 + 0.5 * sin(time * 1.1)) * calm;
+    float a2 = (-1.1 + 0.4 * sin(time * 0.9 + 1.3)) * calm;
     float4 lc = float4(0.0);
     for (int j = 0; j < 4; j++) {
         float k = 1.0 - 0.12 * float(j);   // a few taps along the swirl smear the picture into streaks
@@ -210,7 +217,7 @@ half4 main(float2 p) {
     }
     lc *= 0.25;
     if (r > 0.78) {   // dispersion near the rim
-        float e = smoothstep(0.78, 1.0, rc) * 0.05;
+        float e = smoothstep(0.78, 1.0, rc) * 0.05 * (0.5 + 1.0 * seg);   // fringe strength turns with the rim
         lc.r = wave(twirl(twirl(fp + v * (m + e), c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).r;
         lc.b = wave(twirl(twirl(fp + v * (m - e), c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).b;
     }
@@ -219,7 +226,7 @@ half4 main(float2 p) {
 
     // dark blue band just inside the rim
     float blue = smoothstep(0.86, 0.95, rc) * (1.0 - smoothstep(0.975, 0.995, r));
-    lc.rgb = mix(lc.rgb, float3(0.16, 0.27, 0.58), blue * (0.30 + 0.25 * seg));
+    lc.rgb = mix(lc.rgb, mix(float3(0.16, 0.27, 0.58), irid * 0.85, 0.45), blue * (0.38 + 0.34 * seg));
 
     // thin cold specular edge, brightest towards the top
     float edge = abs(d - (lensR - rimPx * 0.5));
@@ -227,7 +234,8 @@ half4 main(float2 p) {
     float lit = abs(dot(n, float2(-0.35, -0.94)));
     float light = 0.45 + 0.55 * lit * sqrt(lit);
     float3 rimCol = mix(float3(0.95, 0.97, 1.0), float3(0.60, 0.74, 1.0), 0.25 + 0.5 * (1.0 - seg));
-    lc.rgb = mix(lc.rgb, rimCol, rim * light * (0.38 + 0.32 * seg));
+    rimCol = mix(rimCol, 0.35 + 0.75 * irid, 0.55);   // iridescent
+    lc.rgb = mix(lc.rgb, rimCol, rim * (0.35 + 0.65 * light) * (0.40 + 0.55 * seg));
 
     float cover = 1.0 - smoothstep(lensR - 0.8, lensR + 0.8, d);
     return half4(mix(base, lc, cover * lensA));
