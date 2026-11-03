@@ -19,8 +19,8 @@ import androidx.annotation.RequiresApi
  *    lobes level with the fingerprint, on its left and right;
  *  - the lens magnifies about 1.3x and folds the picture over at the rim; inside it the picture is stirred by a
  *    liquid swirl whose centre keeps drifting around (from the user's close-up recording of the lens);
- *  - the rim is a dark blue band, a thin cold white edge and a faint warm halo just outside; its chromatic sheen
- *    and glints turn around the lens (about one turn every 4.5 s).
+ *  - the rim is a dark blue band and a thin cold white edge; around it the picture is split into R/G/B and bent
+ *    (real chromatic aberration + refraction, no painted colours), and that ring turns about once every 4.5 s.
  */
 @RequiresApi(33)
 class FingerprintFx {
@@ -181,22 +181,26 @@ half4 main(float2 p) {
     if (lensA < 0.001) return half4(base);
     float2 v = p - fp;
     float d = length(v);
-    if (d > lensR * 1.08 + 1.5) return half4(base);
+    if (d > lensR * 1.12 + 1.5) return half4(base);
 
     float r = d / lensR;
     float rc = min(r, 1.0);
     float2 n = d > 0.0 ? v / d : float2(0.0, -1.0);
-    // the chromatic rim turns: three bright glints and a rainbow sheen, about one turn every 4.5 s
+    // the chromatic ring turns: three strong spots of aberration + bending, about one turn every 4.5 s
     float spin = atan(n.y, n.x) - time * 1.4;
     float seg = 0.5 + 0.5 * sin(spin * 3.0);
     seg = seg * seg * (3.0 - 2.0 * seg);
-    float3 irid = 0.5 + 0.5 * cos(float3(0.0, 2.1, 4.2) + spin * 2.0);
+    float2 tg = float2(-n.y, n.x);   // along the rim
 
-    // faint warm halo just outside the rim
+    // just outside the rim the picture is bent and split into R/G/B
     if (r > 1.0) {
-        float halo = (1.0 - smoothstep(1.0, 1.08, r)) * lensA;
-        float3 haloCol = mix(float3(0.09, 0.07, -0.03), (irid - 0.35) * 0.22, 0.6);
-        base.rgb = clamp(base.rgb + haloCol * halo * (0.6 + 0.8 * seg), 0.0, 1.0);
+        float halo = (1.0 - smoothstep(1.0, 1.12, r)) * lensA;
+        float2 bend = n * (lensR * 0.08 * (0.4 + 0.6 * seg) * halo);
+        float2 ab = (n * 0.6 + tg * 0.8) * (lensR * 0.12 * (0.25 + 0.75 * seg) * halo);
+        float4 o = wave(p - bend);
+        o.r = wave(p - bend + ab).r;
+        o.b = wave(p - bend - ab).b;
+        base = o;
         if (d > lensR + 1.5) return half4(base);
     }
 
@@ -216,17 +220,24 @@ half4 main(float2 p) {
         lc += wave(twirl(twirl(pl, c1, lensR * 0.62, a1 * k), c2, lensR * 0.5, a2 * k));
     }
     lc *= 0.25;
-    if (r > 0.78) {   // dispersion near the rim
-        float e = smoothstep(0.78, 1.0, rc) * 0.05 * (0.5 + 1.0 * seg);   // fringe strength turns with the rim
-        lc.r = wave(twirl(twirl(fp + v * (m + e), c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).r;
-        lc.b = wave(twirl(twirl(fp + v * (m - e), c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).b;
+    if (r > 0.6) {
+        // chromatic aberration along and across the rim, strongest in the turning spots
+        float z = smoothstep(0.6, 1.0, rc);
+        float e = z * 0.13 * (0.35 + 0.65 * seg);
+        float2 ta = tg * (lensR * 0.14 * z * seg);
+        // the refraction itself wobbles with the spots, so the edge of the picture visibly turns
+        float mw = m - z * 0.10 * (seg - 0.5);
+        float4 lr = wave(twirl(twirl(fp + v * mw, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2));
+        lr.r = wave(twirl(twirl(fp + v * (mw + e) + ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).r;
+        lr.b = wave(twirl(twirl(fp + v * (mw - e) - ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).b;
+        lc = mix(lc, lr, z);
     }
     lc.rgb = lc.rgb + 0.03 * (1.0 - lc.rgb);           // faint milky lift of the glass
     lc.rgb *= 1.0 - 0.08 * smoothstep(0.86, 0.97, rc);  // a touch darker just inside the rim
 
     // dark blue band just inside the rim
     float blue = smoothstep(0.86, 0.95, rc) * (1.0 - smoothstep(0.975, 0.995, r));
-    lc.rgb = mix(lc.rgb, mix(float3(0.16, 0.27, 0.58), irid * 0.85, 0.45), blue * (0.38 + 0.34 * seg));
+    lc.rgb = mix(lc.rgb, float3(0.16, 0.27, 0.58), blue * 0.34);
 
     // thin cold specular edge, brightest towards the top
     float edge = abs(d - (lensR - rimPx * 0.5));
@@ -234,8 +245,7 @@ half4 main(float2 p) {
     float lit = abs(dot(n, float2(-0.35, -0.94)));
     float light = 0.45 + 0.55 * lit * sqrt(lit);
     float3 rimCol = mix(float3(0.95, 0.97, 1.0), float3(0.60, 0.74, 1.0), 0.25 + 0.5 * (1.0 - seg));
-    rimCol = mix(rimCol, 0.35 + 0.75 * irid, 0.55);   // iridescent
-    lc.rgb = mix(lc.rgb, rimCol, rim * (0.35 + 0.65 * light) * (0.40 + 0.55 * seg));
+    lc.rgb = mix(lc.rgb, rimCol, rim * light * (0.40 + 0.45 * seg));
 
     float cover = 1.0 - smoothstep(lensR - 0.8, lensR + 0.8, d);
     return half4(mix(base, lc, cover * lensA));
