@@ -378,7 +378,7 @@ class ClockWallpaperService : WallpaperService() {
         private fun animating() = visible && (phase == Phase.WAKE || phase == Phase.SLEEP || phase == Phase.TO_HOME)
 
         /** Experimental: the lens is showing on a settled lock screen and its liquid swirl needs frames. */
-        private fun lensLive() = fx != null && visible && phase == Phase.LOCK && lensA > 0.003f && fxEnabled()
+        private fun lensLive() = fx != null && !fxBroken && visible && phase == Phase.LOCK && lensA > 0.003f && fxEnabled()
 
         private fun fxEnabled() = getSharedPreferences(FX_PREFS, Context.MODE_PRIVATE).getBoolean("enabled", true)
 
@@ -537,7 +537,17 @@ class ClockWallpaperService : WallpaperService() {
             drawClock(canvas)
         }
 
-        private fun fxEffect(): RenderEffect? {
+        private var fxBroken = false
+
+        /** Never lets the experiment break the wallpaper: any shader failure switches the effect off for good. */
+        private fun fxEffect(): RenderEffect? = if (fxBroken) null else try {
+            buildFxEffect()
+        } catch (e: Throwable) {
+            fxBroken = true
+            null
+        }
+
+        private fun buildFxEffect(): RenderEffect? {
             val fx = fx ?: return null
             val prefs = getSharedPreferences(FX_PREFS, Context.MODE_PRIVATE)
             if (!fxEnabled()) return null
