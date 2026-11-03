@@ -17,6 +17,12 @@ android {
         targetSdk 36
         versionCode 2
         versionName "1.1-reference"
+        // Off in the normal builds: the fingerprint lens + chromatic unlock wave only exist in the experimental APK
+        buildConfigField "boolean", "CHROMATIC_FX", "false"
+    }
+
+    buildFeatures {
+        buildConfig true
     }
 
     signingConfigs {
@@ -34,6 +40,16 @@ android {
         release {
             debuggable false
             signingConfig signingConfigs.release
+        }
+        // ./gradlew assembleExperimental -> a separate app (own package id) that installs next to the normal one,
+        // so going back is just picking the normal Petal Clock wallpaper again
+        experimental {
+            initWith release
+            applicationIdSuffix ".experimental"
+            versionNameSuffix "-experimental"
+            buildConfigField "boolean", "CHROMATIC_FX", "true"
+            signingConfig keystoreFile.exists() ? signingConfigs.release : signingConfigs.debug
+            matchingFallbacks = ['release']
         }
     }
 

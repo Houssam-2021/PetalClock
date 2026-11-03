@@ -18,6 +18,7 @@ import android.graphics.RenderEffect
 import android.graphics.RenderNode
 import android.graphics.Shader
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.os.Handler
 import android.os.Looper
@@ -81,6 +82,15 @@ class ClockWallpaperService : WallpaperService() {
         val dotColor = Color.rgb(189, 217, 255)
         val ringColor = Color.rgb(100, 116, 146)
         val dateColor = Color.rgb(155, 184, 224)
+
+        // Experimental fingerprint lens: centre and size in reference units, measured from the user's lock-screen
+        // photo so the lens sits right under the system fingerprint icon. The height can be nudged in the app.
+        const val FP_X = 230f
+        const val FP_Y = 908f
+        const val FP_LENS_R = 46.7f
+        const val FP_RIM = 2.2f
+        const val FP_STRIP = 78f
+        const val FX_PREFS = "fingerprint_fx"
     }
 
     inner class ClockEngine : Engine() {
@@ -145,10 +155,31 @@ class ClockWallpaperService : WallpaperService() {
         }
         private val effectCache = mutableMapOf<Int, RenderEffect>()
 
+        // experimental fingerprint lens + chromatic unlock wave (null in the normal builds, or if the shader fails)
+        private val fx: FingerprintFx? by lazy {
+            if (!BuildConfig.CHROMATIC_FX || Build.VERSION.SDK_INT < 33) null
+            else try { FingerprintFx() } catch (e: Throwable) { null }
+        }
+        private val sceneNode = RenderNode("scene")
+        private var lensA = 0f
+        private var waveT = -1f
+        private var lastLensFrame = 0L
+
         private val frameCallback = object : Choreographer.FrameCallback {
             override fun doFrame(frameTimeNanos: Long) {
-                draw()
-                if (animating()) choreographer.postFrameCallback(this)
+                if (animating()) {
+                    draw()
+                    if (animating() || lensLive()) choreographer.postFrameCallback(this)
+                } else if (lensLive()) {
+                    // experimental: keep the liquid lens moving on the lock screen, at ~30 fps to spare the battery
+                    if (frameTimeNanos - lastLensFrame >= 30_000_000L) {
+                        lastLensFrame = frameTimeNanos
+                        draw()
+                    }
+                    if (lensLive()) choreographer.postFrameCallback(this)
+                } else {
+                    draw()
+                }
             }
         }
 
@@ -243,7 +274,7 @@ class ClockWallpaperService : WallpaperService() {
             k = max(width / RW, height / RH)
             ox = (width - RW * k) / 2f
             oy = (height - RH * k) / 2f
-            for (n in arrayOf(petalNode, digitNode, lowNode, coreNode, coreLowNode, dotNode)) n.setPosition(0, 0, width, height)
+            for (n in arrayOf(petalNode, digitNode, lowNode, coreNode, coreLowNode, dotNode, sceneNode)) n.setPosition(0, 0, width, height)
             draw()
         }
 
@@ -288,6 +319,7 @@ class ClockWallpaperService : WallpaperService() {
             super.onZoomChanged(z)
             zoom = z
             if (visible && (phase == Phase.HOME || phase == Phase.LOCK)) draw()
+            if (lensLive()) postFrame()
         }
 
         override fun onTouchEvent(event: MotionEvent) {
@@ -344,6 +376,11 @@ class ClockWallpaperService : WallpaperService() {
         }
 
         private fun animating() = visible && (phase == Phase.WAKE || phase == Phase.SLEEP || phase == Phase.TO_HOME)
+
+        /** Experimental: the lens is showing on a settled lock screen and its liquid swirl needs frames. */
+        private fun lensLive() = fx != null && visible && phase == Phase.LOCK && lensA > 0.003f && fxEnabled()
+
+        private fun fxEnabled() = getSharedPreferences(FX_PREFS, Context.MODE_PRIVATE).getBoolean("enabled", true)
 
         private fun postFrame() {
             choreographer.removeFrameCallback(frameCallback)
@@ -456,6 +493,17 @@ class ClockWallpaperService : WallpaperService() {
                     fineA = 0.58f * (1f - smooth(t / 0.25f))
                 }
             }
+            fxScene(t)
+        }
+
+        /** Experimental: the lens follows the petals in and out, and the unlock wave runs at the start of TO_HOME. */
+        private fun fxScene(t: Float) {
+            lensA = when (phase) {
+                Phase.WAKE, Phase.LOCK, Phase.SLEEP -> petalA * (1f - zoom)
+                Phase.TO_HOME -> 1f - smooth((t - 0.13f) / 0.07f)
+                else -> 0f
+            }
+            waveT = if (phase == Phase.TO_HOME) t else -1f
         }
 
         // --- drawing -------------------------------------------------------------------------------------------
@@ -465,14 +513,42 @@ class ClockWallpaperService : WallpaperService() {
             val canvas = try { surfaceHolder.lockHardwareCanvas() } catch (e: Exception) { null } ?: return
             try {
                 updateScene()
-                canvas.drawColor(Color.BLACK)
-                drawPetals(canvas)
-                drawDate(canvas)
-                drawAodDate(canvas)
-                drawClock(canvas)
+                val effect = fxEffect()
+                if (effect == null) {
+                    drawScene(canvas)
+                } else {
+                    // experimental: the same frame, drawn through the fingerprint lens / unlock wave shader
+                    val rc = sceneNode.beginRecording(w, h)
+                    drawScene(rc)
+                    sceneNode.endRecording()
+                    sceneNode.setRenderEffect(effect)
+                    canvas.drawRenderNode(sceneNode)
+                }
             } finally {
                 surfaceHolder.unlockCanvasAndPost(canvas)
             }
+        }
+
+        private fun drawScene(canvas: Canvas) {
+            canvas.drawColor(Color.BLACK)
+            drawPetals(canvas)
+            drawDate(canvas)
+            drawAodDate(canvas)
+            drawClock(canvas)
+        }
+
+        private fun fxEffect(): RenderEffect? {
+            val fx = fx ?: return null
+            val prefs = getSharedPreferences(FX_PREFS, Context.MODE_PRIVATE)
+            if (!fxEnabled()) return null
+            val wave = fx.wave(waveT)
+            if (wave == null && lensA <= 0.003f) return null
+            val size = prefs.getInt("size", 100) / 100f
+            val cy = FP_Y + prefs.getInt("offsetY", 0)
+            return fx.effect(
+                w, h, ox + FP_X * k, oy + cy * k, FP_LENS_R * size * k, FP_RIM * k,
+                lensA.coerceIn(0f, 1f), wave, FP_STRIP * size * k, (SystemClock.uptimeMillis() % 600_000L) / 1000f,
+            )
         }
 
         /** A blur of the given standard deviation (reference px); RenderEffect takes a radius, sigma = 0.577 r + 0.5. */

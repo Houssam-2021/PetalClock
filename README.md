@@ -21,3 +21,11 @@ The APK is written to `app/build/outputs/apk/debug/app-debug.apk`.
 
 - Samsung's system Always On Display is not replaced; the wallpaper only draws while its surface is visible.
 - The website lives in `docs/` and is deployed as a Cloudflare Worker with static assets (`npx wrangler deploy`).
+
+## Experimental build
+
+`./gradlew assembleExperimental` builds **Petal Clock Experimental** (`com.blurify.clockwall.reference.experimental`),
+a separate app that installs next to the normal one. It adds a glass fingerprint lens on the lock screen and a
+chromatic shock wave from it when you unlock (Android 13+). Its launcher screen can turn the effect off and move or
+resize the lens. To go back, set the normal Petal Clock wallpaper again or uninstall the experimental app.
+The normal `assembleDebug` / `assembleRelease` builds are unchanged and never include the effect.

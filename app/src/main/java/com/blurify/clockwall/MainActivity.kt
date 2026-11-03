@@ -10,6 +10,8 @@ import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
 import android.widget.LinearLayout
+import android.widget.SeekBar
+import android.widget.Switch
 import android.widget.TextView
 
 /** Tiny launcher screen: one button that opens the system "set live wallpaper" preview. */
@@ -48,6 +50,51 @@ class MainActivity : Activity() {
                 )
             }
         })
+        if (BuildConfig.CHROMATIC_FX) addExperimentalControls(root, pad)
         setContentView(root)
+    }
+
+    /** Experimental build only: switch the fingerprint effect off, or line the lens up with the fingerprint icon. */
+    private fun addExperimentalControls(root: LinearLayout, pad: Int) {
+        val prefs = getSharedPreferences("fingerprint_fx", MODE_PRIVATE)
+        val dim = Color.argb(170, 255, 255, 255)
+        root.addView(TextView(this).apply {
+            text = "Experimental build: glass fingerprint lens and chromatic unlock wave (Android 13+). " +
+                "To go back, set the normal Petal Clock wallpaper again or uninstall this app."
+            textSize = 13f
+            setTextColor(dim)
+            gravity = Gravity.CENTER
+            setPadding(0, pad, 0, pad / 2)
+        })
+        root.addView(Switch(this).apply {
+            text = "Fingerprint effect"
+            setTextColor(Color.WHITE)
+            isChecked = prefs.getBoolean("enabled", true)
+            setOnCheckedChangeListener { _, on -> prefs.edit().putBoolean("enabled", on).apply() }
+        })
+        fun slider(label: String, key: String, def: Int, lo: Int, hi: Int, unit: (Int) -> String) {
+            val caption = TextView(this).apply {
+                textSize = 13f
+                setTextColor(dim)
+                setPadding(0, pad / 2, 0, 0)
+            }
+            val value = prefs.getInt(key, def)
+            caption.text = "$label: ${unit(value)}"
+            root.addView(caption)
+            root.addView(SeekBar(this).apply {
+                max = hi - lo
+                progress = value - lo
+                setOnSeekBarChangeListener(object : SeekBar.OnSeekBarChangeListener {
+                    override fun onProgressChanged(bar: SeekBar, p: Int, fromUser: Boolean) {
+                        caption.text = "$label: ${unit(p + lo)}"
+                        prefs.edit().putInt(key, p + lo).apply()
+                    }
+                    override fun onStartTrackingTouch(bar: SeekBar) {}
+                    override fun onStopTrackingTouch(bar: SeekBar) {}
+                })
+            }, LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, LinearLayout.LayoutParams.WRAP_CONTENT))
+        }
+        slider("Lens height", "offsetY", 0, -80, 80) { if (it == 0) "default" else if (it < 0) "${-it} up" else "$it down" }
+        slider("Lens size", "size", 100, 60, 150) { "$it%" }
     }
 }
