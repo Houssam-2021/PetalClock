@@ -139,13 +139,20 @@ float4 wave(float2 p) {
         col = src(q);
     }
 
+    // colour fringing on every edge inside the wave (red pushed out, blue pulled in)
+    float ca = 0.012 * blurA * inside;
+    if (ca * res.x > 0.75) {
+        col.r = mix(col.r, src(q + dpx * ca).r, 0.85);
+        col.b = mix(col.b, src(q - dpx * ca).b, 0.85);
+    }
+
     // dispersion band: two lobes level with the fingerprint
     if (colorA > 0.001) {
         float s = (waveR - d) / BAND;
         if (s > 0.0 && s < 1.25) {
             float dy = (p.y - fp.y) / stripH;
             float w = colorA * exp(-dy * dy);
-            float sh = 0.010 * w;
+            float sh = 0.018 * w;
             col.r = mix(col.r, src(q + dpx * sh).r, w);
             col.b = mix(col.b, src(q - dpx * sh).b, w);
             float4 t = tint(s);
