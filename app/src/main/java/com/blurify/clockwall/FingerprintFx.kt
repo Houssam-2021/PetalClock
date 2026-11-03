@@ -37,7 +37,7 @@ class FingerprintFx {
             radius = r,
             distort = smooth(t / 0.03f) * (1f - smooth((t - 0.14f) / 0.20f)),
             blur = smooth(t / 0.04f) * (1f - smooth((t - 0.10f) / 0.22f)),
-            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.16f) / 0.09f)),
+            color = smooth((t - 0.02f) / 0.05f) * (1f - smooth((t - 0.14f) / 0.09f)),
         )
     }
 
@@ -91,17 +91,17 @@ float4 src(float2 p) {
 
 // s = 0 at the leading edge of the band, 1.25 at its trailing edge. rgb + alpha.
 float4 tint(float s) {
-    float4 k0 = float4(0.95, 0.80, 0.25, 0.00);
-    float4 k1 = float4(0.98, 0.82, 0.30, 0.62);
-    float4 k2 = float4(1.00, 0.92, 0.45, 0.88);
-    float4 k3 = float4(0.92, 1.00, 0.70, 1.00);
-    float4 k4 = float4(0.75, 1.00, 0.90, 1.00);
-    float4 k5 = float4(0.35, 0.90, 1.00, 1.00);
-    float4 k6 = float4(0.12, 0.62, 1.00, 1.00);
-    float4 k7 = float4(0.06, 0.40, 1.00, 1.00);
-    float4 k8 = float4(0.10, 0.25, 0.85, 1.00);
-    float4 k9 = float4(0.20, 0.20, 0.55, 0.62);
-    float4 k10 = float4(0.20, 0.20, 0.55, 0.00);
+    float4 k0 = float4(0.94, 0.78, 0.22, 0.00);
+    float4 k1 = float4(0.95, 0.79, 0.24, 0.48);
+    float4 k2 = float4(0.96, 0.88, 0.40, 0.68);
+    float4 k3 = float4(0.88, 0.96, 0.62, 0.80);
+    float4 k4 = float4(0.71, 0.96, 0.82, 0.86);
+    float4 k5 = float4(0.33, 0.84, 0.90, 0.88);
+    float4 k6 = float4(0.11, 0.60, 0.92, 0.92);
+    float4 k7 = float4(0.05, 0.40, 0.96, 0.94);
+    float4 k8 = float4(0.08, 0.26, 0.82, 0.88);
+    float4 k9 = float4(0.16, 0.22, 0.52, 0.52);
+    float4 k10 = float4(0.16, 0.22, 0.52, 0.00);
     if (s < 0.10) return mix(k0, k1, s / 0.10);
     if (s < 0.25) return mix(k1, k2, (s - 0.10) / 0.15);
     if (s < 0.38) return mix(k2, k3, (s - 0.25) / 0.13);
@@ -124,11 +124,11 @@ float4 wave(float2 p) {
     // swell: the picture just behind the front is pushed outward
     float x = (waveR - d) / SWELL;
     float swell = (x > 0.0 && x < 1.0) ? sin(3.14159265 * x) * (1.0 - x) * 1.77 : 0.0;
-    float2 q = p - dpx * (0.050 * distA * swell);
+    float2 q = p - dpx * (0.038 * distA * swell);
 
     // zoom blur inside the wave, streak length growing with the distance from the finger
     float inside = 1.0 - smoothstep(-0.05, 0.03, d - waveR);
-    float len = blurA * inside * min(d, 0.5) * 0.30;
+    float len = blurA * inside * min(d, 0.5) * 0.24;
     float4 col;
     if (len * res.x > 0.75) {
         float4 acc = float4(0.0);
@@ -141,7 +141,7 @@ float4 wave(float2 p) {
     }
 
     // colour fringing on every edge inside the wave (red pushed out, blue pulled in)
-    float ca = 0.022 * blurA * inside;
+    float ca = 0.016 * blurA * inside;
     if (ca * res.x > 0.75) {
         col.r = mix(col.r, src(q + dpx * ca).r, 0.85);
         col.b = mix(col.b, src(q - dpx * ca).b, 0.85);
@@ -152,13 +152,13 @@ float4 wave(float2 p) {
         float s = (waveR - d) / BAND;
         if (s > 0.0 && s < 1.25) {
             float dy = (p.y - fp.y) / stripH;
-            float w = min(1.0, 1.6 * colorA * exp(-dy * dy));
+            float w = min(1.0, 1.2 * colorA * exp(-dy * dy));
             float sh = 0.018 * w;
             col.r = mix(col.r, src(q + dpx * sh).r, w);
             col.b = mix(col.b, src(q - dpx * sh).b, w);
             float4 t = tint(s);
             col.rgb = mix(col.rgb, t.rgb, t.a * w);
-            col.rgb += t.rgb * (t.a * w * 0.28);   // the band glows, so it reads on dark and blue wallpapers too
+            col.rgb += t.rgb * (t.a * w * 0.12);   // the band glows, so it reads on dark and blue wallpapers too
         }
     }
     return col;

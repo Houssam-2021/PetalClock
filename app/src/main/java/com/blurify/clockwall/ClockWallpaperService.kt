@@ -89,7 +89,7 @@ class ClockWallpaperService : WallpaperService() {
         const val FP_Y = 908f
         const val FP_LENS_R = 46.7f
         const val FP_RIM = 2.2f
-        const val FP_STRIP = 120f
+        const val FP_STRIP = 105f
         const val FX_PREFS = "fingerprint_fx"
     }
 
