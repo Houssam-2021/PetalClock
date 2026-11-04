@@ -1,0 +1,118 @@
+name: Release APK
+
+# Builds the signed release APK and publishes it as the latest GitHub release, which is what the website's
+# download button (releases/latest/download/petalclock.apk) serves.
+#
+# Needs four repository secrets (Settings -> Secrets and variables -> Actions):
+#   RELEASE_KEYSTORE_BASE64  the release .jks file, base64 encoded
+#   RELEASE_STORE_PASSWORD   its store password
+#   RELEASE_KEY_ALIAS        the key alias
+#   RELEASE_KEY_PASSWORD     the key password
+# Start it by pushing a tag such as v1.2, or with "Run workflow" on the Actions tab.
+on:
+  push:
+    tags: ['v*']
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: 'Release tag, e.g. v1.2'
+        required: true
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    env:
+      TAG: ${{ github.event.inputs.tag || github.ref_name }}
+      # SHA-256 of the certificate that signed v1.0: updates only install over it when this matches
+      EXPECTED_CERT: c932469af61fe8bb3e413633e015ab2fecd9c509a8812580a4b60bea91703b37
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check signing secrets
+        env:
+          KS: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          SP: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KA: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KP: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          for v in KS SP KA KP; do
+            if [ -z "${!v}" ]; then
+              echo "::error::Release signing secrets are missing. Add RELEASE_KEYSTORE_BASE64, RELEASE_STORE_PASSWORD, RELEASE_KEY_ALIAS and RELEASE_KEY_PASSWORD."
+              exit 1
+            fi
+          done
+
+      - name: Write keystore
+        env:
+          KS: ${{ secrets.RELEASE_KEYSTORE_BASE64 }}
+          SP: ${{ secrets.RELEASE_STORE_PASSWORD }}
+          KA: ${{ secrets.RELEASE_KEY_ALIAS }}
+          KP: ${{ secrets.RELEASE_KEY_PASSWORD }}
+        run: |
+          echo "$KS" | base64 -d > app/release.jks
+          {
+            echo "storeFile=release.jks"
+            echo "storePassword=$SP"
+            echo "keyAlias=$KA"
+            echo "keyPassword=$KP"
+          } > keystore.properties
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build release APK
+        run: |
+          chmod +x gradlew
+          ./gradlew --no-daemon assembleRelease
+          cp app/build/outputs/apk/release/app-release.apk petalclock.apk
+
+      - name: Check it is signed with the same key as v1.0
+        run: |
+          python3 - <<'EOF'
+          import hashlib, os, struct, sys
+          b = open('petalclock.apk', 'rb').read()
+          eocd = b.rfind(b'PK\x05\x06')
+          cd = struct.unpack('<I', b[eocd + 16:eocd + 20])[0]
+          if b[cd - 16:cd] != b'APK Sig Block 42':
+              sys.exit('APK has no v2 signature block')
+          size = struct.unpack('<Q', b[cd - 24:cd - 16])[0]
+          p, end, found = cd - size, cd - 24, None
+          while p < end:
+              ln = struct.unpack('<Q', b[p:p + 8])[0]
+              kid = struct.unpack('<I', b[p + 8:p + 12])[0]
+              val = b[p + 12:p + 8 + ln]
+              p += 8 + ln
+              if kid in (0x7109871a, 0xf05368c0):
+                  q = 8
+                  sd = val[q + 4:q + 4 + struct.unpack('<I', val[q:q + 4])[0]]
+                  r = 4 + struct.unpack('<I', sd[0:4])[0] + 4
+                  cert = sd[r + 4:r + 4 + struct.unpack('<I', sd[r:r + 4])[0]]
+                  found = hashlib.sha256(cert).hexdigest()
+                  break
+          print('signing certificate', found)
+          if found != os.environ['EXPECTED_CERT']:
+              sys.exit('Signed with a different key than v1.0: phones with v1.0 could not update. Not publishing.')
+          EOF
+
+      - name: Publish release
+        uses: softprops/action-gh-release@v2
+        with:
+          tag_name: ${{ env.TAG }}
+          name: Petal Clock ${{ env.TAG }}
+          make_latest: true
+          body: |
+            - Glass fingerprint lens on the lock screen, with a drifting liquid swirl and a turning chromatic ring
+            - On unlock the lens swells into a water drop and a chromatic wave ripples out (Android 13 or newer)
+            - The lens can be moved, resized or switched off in the Petal Clock app
+          files: petalclock.apk
+
+      - name: Remove keystore
+        if: always()
+        run: rm -f app/release.jks keystore.properties

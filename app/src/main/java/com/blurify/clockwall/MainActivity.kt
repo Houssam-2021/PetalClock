@@ -6,6 +6,7 @@ import android.content.ComponentName
 import android.content.Intent
 import android.graphics.Color
 import android.graphics.Typeface
+import android.os.Build
 import android.os.Bundle
 import android.view.Gravity
 import android.widget.Button
@@ -50,17 +51,17 @@ class MainActivity : Activity() {
                 )
             }
         })
-        if (BuildConfig.CHROMATIC_FX) addExperimentalControls(root, pad)
+        if (BuildConfig.CHROMATIC_FX && Build.VERSION.SDK_INT >= 33) addFingerprintControls(root, pad)
         setContentView(root)
     }
 
-    /** Experimental build only: switch the fingerprint effect off, or line the lens up with the fingerprint icon. */
-    private fun addExperimentalControls(root: LinearLayout, pad: Int) {
+    /** Switch the fingerprint effect off, or line the lens up with the phone's fingerprint icon. */
+    private fun addFingerprintControls(root: LinearLayout, pad: Int) {
         val prefs = getSharedPreferences("fingerprint_fx", MODE_PRIVATE)
         val dim = Color.argb(170, 255, 255, 255)
         root.addView(TextView(this).apply {
-            text = "Experimental build: glass fingerprint lens and chromatic unlock wave (Android 13+). " +
-                "To go back, set the normal Petal Clock wallpaper again or uninstall this app."
+            text = "Glass fingerprint lens, water drop and chromatic unlock wave. " +
+                "Move or resize the lens to sit right under your phone's fingerprint icon."
             textSize = 13f
             setTextColor(dim)
             gravity = Gravity.CENTER

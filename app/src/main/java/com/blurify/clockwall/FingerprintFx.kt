@@ -5,7 +5,7 @@ import android.graphics.RuntimeShader
 import androidx.annotation.RequiresApi
 
 /**
- * Experimental (CHROMATIC_FX builds only): a glass lens that sits under the system fingerprint icon on the lock
+ * Android 13+ (CHROMATIC_FX): a glass lens that sits under the system fingerprint icon on the lock
  * screen, and the chromatic shock wave that runs out of it when the phone is unlocked.
  *
  * The whole finished frame is drawn into one RenderNode and passed through this shader, so the existing wallpaper

@@ -83,7 +83,7 @@ class ClockWallpaperService : WallpaperService() {
         val ringColor = Color.rgb(100, 116, 146)
         val dateColor = Color.rgb(155, 184, 224)
 
-        // Experimental fingerprint lens: centre and size in reference units, measured from the user's lock-screen
+        // Fingerprint lens: centre and size in reference units, measured from the user's lock-screen
         // photo so the lens sits right under the system fingerprint icon. The height can be nudged in the app.
         const val FP_X = 230f
         const val FP_Y = 908f
@@ -155,7 +155,7 @@ class ClockWallpaperService : WallpaperService() {
         }
         private val effectCache = mutableMapOf<Int, RenderEffect>()
 
-        // experimental fingerprint lens + chromatic unlock wave (null in the normal builds, or if the shader fails)
+        // fingerprint lens + chromatic unlock wave (null below Android 13, with CHROMATIC_FX off, or if the shader fails)
         private val fx: FingerprintFx? by lazy {
             if (!BuildConfig.CHROMATIC_FX || Build.VERSION.SDK_INT < 33) null
             else try { FingerprintFx() } catch (e: Throwable) { null }
@@ -178,7 +178,7 @@ class ClockWallpaperService : WallpaperService() {
                     draw()
                     if (animating() || lensLive()) choreographer.postFrameCallback(this)
                 } else if (lensLive()) {
-                    // experimental: keep the liquid lens moving on the lock screen, at ~30 fps to spare the battery
+                    // fingerprint effect: keep the liquid lens moving on the lock screen, at ~30 fps to spare the battery
                     if (frameTimeNanos - lastLensFrame >= 30_000_000L) {
                         lastLensFrame = frameTimeNanos
                         draw(lensOnly = true)
@@ -387,7 +387,7 @@ class ClockWallpaperService : WallpaperService() {
 
         private fun animating() = visible && (phase == Phase.WAKE || phase == Phase.SLEEP || phase == Phase.TO_HOME)
 
-        /** Experimental: the lens is showing on a settled lock screen and its liquid swirl needs frames. */
+        /** Fingerprint effect: the lens is showing on a settled lock screen and its liquid swirl needs frames. */
         private fun lensLive() = fx != null && !fxBroken && visible && phase == Phase.LOCK && lensA > 0.003f && fxEnabled()
 
         private fun fxEnabled() = fxOn
@@ -514,7 +514,7 @@ class ClockWallpaperService : WallpaperService() {
             fxScene(t)
         }
 
-        /** Experimental: the lens follows the petals in and out, and the unlock wave runs at the start of TO_HOME. */
+        /** Fingerprint effect: the lens follows the petals in and out, and the unlock wave runs at the start of TO_HOME. */
         private fun fxScene(t: Float) {
             lensA = when (phase) {
                 Phase.WAKE, Phase.LOCK, Phase.SLEEP -> petalA * (1f - zoom)
@@ -534,7 +534,7 @@ class ClockWallpaperService : WallpaperService() {
 
         // --- drawing -------------------------------------------------------------------------------------------
 
-        /** [lensOnly]: an experimental lens-animation frame, where only the shader changes on a settled lock screen. */
+        /** [lensOnly]: a lens-animation frame, where only the shader changes on a settled lock screen. */
         private fun draw(lensOnly: Boolean = false) {
             if (w == 0) return
             val canvas = try { surfaceHolder.lockHardwareCanvas() } catch (e: Exception) { null } ?: return
@@ -545,7 +545,7 @@ class ClockWallpaperService : WallpaperService() {
                     sceneCached = false
                     drawScene(canvas)
                 } else {
-                    // experimental: the same frame, drawn through the fingerprint lens / unlock wave shader.
+                    // fingerprint effect: the same frame, drawn through the fingerprint lens / unlock wave shader.
                     // A settled lock frame is kept in a GPU layer, so the lens animation does not re-render the
                     // petals and the blurred clock 30 times a second: only the shader pass runs.
                     if (!(lensOnly && sceneCached && phase == Phase.LOCK)) {
@@ -576,7 +576,7 @@ class ClockWallpaperService : WallpaperService() {
 
         private var fxBroken = false
 
-        /** Never lets the experiment break the wallpaper: any shader failure switches the effect off for good. */
+        /** Never lets the effect break the wallpaper: any shader failure switches the effect off for good. */
         private fun fxEffect(): RenderEffect? = if (fxBroken) null else try {
             buildFxEffect()
         } catch (e: Throwable) {
