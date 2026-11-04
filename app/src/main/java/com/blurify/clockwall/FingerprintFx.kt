@@ -19,6 +19,8 @@ import androidx.annotation.RequiresApi
  *    lobes level with the fingerprint, on its left and right;
  *  - the lens magnifies about 1.3x and folds the picture over at the rim; inside it the picture is stirred by a
  *    liquid swirl whose centre keeps drifting around (from the user's close-up recording of the lens);
+ *  - on unlock the lens swells into a smooth water drop (stronger bulge, thick bright rim, soft highlight) and
+ *    bursts outward as it fades (from the user's ColorOS recording);
  *  - the rim is a dark blue band and a thin cold white edge; around it the picture is split into R/G/B and bent
  *    (real chromatic aberration + refraction, no painted colours), and that ring turns about once every 4.5 s.
  */
@@ -43,9 +45,10 @@ class FingerprintFx {
 
     fun effect(
         w: Int, h: Int, cx: Float, cy: Float, lensR: Float, rimPx: Float, lensA: Float, wave: Wave?, stripH: Float,
-        time: Float,
+        time: Float, drop: Float,
     ): RenderEffect {
         shader.setFloatUniform("time", time)
+        shader.setFloatUniform("drop", drop)
         shader.setFloatUniform("res", w.toFloat(), h.toFloat())
         shader.setFloatUniform("fp", cx, cy)
         shader.setFloatUniform("lensR", lensR)
@@ -81,6 +84,7 @@ uniform float blurA;    // zoom blur strength
 uniform float colorA;   // dispersion band strength
 uniform float stripH;   // px, height of the two colour lobes
 uniform float time;     // seconds, drives the liquid swirl inside the lens
+uniform float drop;     // 0..1: on unlock the lens swells into a smooth water drop
 
 const float BAND = 0.11;   // uv width of the dispersion band
 const float SWELL = 0.26;  // uv width of the swell behind the front
@@ -166,6 +170,17 @@ float4 wave(float2 p) {
     return col;
 }
 
+// inside the lens only the swell of the wave is followed (no blur taps): it is covered by the glass anyway
+float4 waveLite(float2 p) {
+    if (distA < 0.0005) return src(p);
+    float2 duv = (p - fp) / res;
+    float d = length(duv);
+    float2 dir = d > 0.00001 ? duv / d : float2(0.0, -1.0);
+    float x = (waveR - d) / SWELL;
+    float swell = (x > 0.0 && x < 1.0) ? sin(3.14159265 * x) * (1.0 - x) * 1.77 : 0.0;
+    return src(p - dir * res * (0.040 * distA * swell));
+}
+
 // rotate q around c, strongest in the middle, nothing at radius R
 float2 twirl(float2 q, float2 c, float R, float a) {
     float2 u = q - c;
@@ -199,29 +214,33 @@ half4 main(float2 p) {
         float halo = (1.0 - smoothstep(1.0, 1.12, r)) * lensA;
         float2 bend = n * (lensR * 0.08 * (0.4 + 0.6 * seg) * halo);
         float2 ab = (n * 0.6 + tg * 0.8) * (lensR * 0.12 * (0.25 + 0.75 * seg) * halo);
-        float4 o = wave(p - bend);
-        o.r = wave(p - bend + ab).r;
-        o.b = wave(p - bend - ab).b;
+        float4 o = waveLite(p - bend);
+        o.r = waveLite(p - bend + ab).r;
+        o.b = waveLite(p - bend - ab).b;
         base = o;
         if (d > lensR + 1.5) return half4(base);
     }
 
     // magnify ~1.3x in the middle and fold the picture over in a thin band at the rim
-    float m = 0.78 - 0.22 * rc * rc * rc * rc * rc;
+    float m = 0.78 - 0.16 * drop - 0.22 * rc * rc * rc * rc * rc;   // the water drop bulges more
     float2 pl = fp + v * m;
 
     // liquid swirl: two vortices whose centres drift inside the lens; the rim keeps a clean refraction
     float calm = 1.0 - smoothstep(0.62, 0.92, rc);
     float2 c1 = fp + lensR * 0.34 * float2(sin(time * 1.7 + 0.7) * cos(time * 0.6), sin(time * 1.3 + 2.1));
     float2 c2 = fp + lensR * 0.36 * float2(cos(time * 1.1 + 4.0), sin(time * 1.9 + 0.3) * cos(time * 0.5 + 1.0));
-    float a1 = (1.8 + 0.5 * sin(time * 1.1)) * calm;
-    float a2 = (-1.1 + 0.4 * sin(time * 0.9 + 1.3)) * calm;
+    float a1 = (1.8 + 0.5 * sin(time * 1.1)) * calm * (1.0 - drop);   // the drop is smooth water
+    float a2 = (-1.1 + 0.4 * sin(time * 0.9 + 1.3)) * calm * (1.0 - drop);
     float4 lc = float4(0.0);
-    for (int j = 0; j < 3; j++) {
-        float k = 1.0 - 0.16 * float(j);   // a few taps along the swirl smear the picture into streaks
-        lc += wave(twirl(twirl(pl, c1, lensR * 0.62, a1 * k), c2, lensR * 0.5, a2 * k));
+    if (drop > 0.5) {
+        lc = waveLite(twirl(twirl(pl, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2));   // swirl has settled: 1 tap
+    } else {
+        for (int j = 0; j < 3; j++) {
+            float k = 1.0 - 0.16 * float(j);   // a few taps along the swirl smear the picture into streaks
+            lc += waveLite(twirl(twirl(pl, c1, lensR * 0.62, a1 * k), c2, lensR * 0.5, a2 * k));
+        }
+        lc *= 1.0 / 3.0;
     }
-    lc *= 1.0 / 3.0;
     if (r > 0.6) {
         // chromatic aberration along and across the rim, strongest in the turning spots
         float z = smoothstep(0.6, 1.0, rc);
@@ -229,12 +248,12 @@ half4 main(float2 p) {
         float2 ta = tg * (lensR * 0.14 * z * seg);
         // the refraction itself wobbles with the spots, so the edge of the picture visibly turns
         float mw = m - z * 0.10 * (seg - 0.5);
-        float4 lr = wave(twirl(twirl(fp + v * mw, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2));
-        lr.r = wave(twirl(twirl(fp + v * (mw + e) + ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).r;
-        lr.b = wave(twirl(twirl(fp + v * (mw - e) - ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).b;
+        float4 lr = waveLite(twirl(twirl(fp + v * mw, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2));
+        lr.r = waveLite(twirl(twirl(fp + v * (mw + e) + ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).r;
+        lr.b = waveLite(twirl(twirl(fp + v * (mw - e) - ta, c1, lensR * 0.62, a1), c2, lensR * 0.5, a2)).b;
         lc = mix(lc, lr, z);
     }
-    lc.rgb = lc.rgb + 0.03 * (1.0 - lc.rgb);           // faint milky lift of the glass
+    lc.rgb = lc.rgb + (0.03 + 0.10 * drop) * (1.0 - lc.rgb);   // milky lift of the glass, brighter as a drop
     lc.rgb *= 1.0 - 0.08 * smoothstep(0.86, 0.97, rc);  // a touch darker just inside the rim
 
     // dark blue band just inside the rim
@@ -242,12 +261,19 @@ half4 main(float2 p) {
     lc.rgb = mix(lc.rgb, float3(0.16, 0.27, 0.58), blue * 0.34);
 
     // thin cold specular edge, brightest towards the top
-    float edge = abs(d - (lensR - rimPx * 0.5));
-    float rim = 1.0 - smoothstep(rimPx * 0.5 - 0.5, rimPx * 0.5 + 0.8, edge);
+    float rw = rimPx * (1.0 + 2.2 * drop);   // the drop has a thicker, softer bright rim
+    float edge = abs(d - (lensR - rw * 0.5));
+    float rim = 1.0 - smoothstep(rw * 0.5 - 0.5, rw * 0.5 + 0.8 + 2.0 * drop * rimPx, edge);
     float lit = abs(dot(n, float2(-0.35, -0.94)));
     float light = 0.45 + 0.55 * lit * sqrt(lit);
     float3 rimCol = mix(float3(0.95, 0.97, 1.0), float3(0.60, 0.74, 1.0), 0.25 + 0.5 * (1.0 - seg));
-    lc.rgb = mix(lc.rgb, rimCol, rim * light * (0.40 + 0.45 * seg));
+    lc.rgb = mix(lc.rgb, rimCol, rim * light * (0.40 + 0.45 * seg + 0.3 * drop));
+
+    // water drop: a big soft highlight towards the top left
+    if (drop > 0.001) {
+        float2 hv = (v - lensR * float2(-0.34, -0.42)) / (lensR * 0.36);
+        lc.rgb = mix(lc.rgb, float3(1.0), 0.38 * drop * exp(-dot(hv, hv)));
+    }
 
     float cover = 1.0 - smoothstep(lensR - 0.8, lensR + 0.8, d);
     return half4(mix(base, lc, cover * lensA));

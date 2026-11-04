@@ -167,6 +167,8 @@ class ClockWallpaperService : WallpaperService() {
         private var fxSize = 1f
         private var fxOffsetY = 0
         private var lensA = 0f
+        private var lensScale = 1f
+        private var dropA = 0f
         private var waveT = -1f
         private var lastLensFrame = 0L
 
@@ -516,8 +518,16 @@ class ClockWallpaperService : WallpaperService() {
         private fun fxScene(t: Float) {
             lensA = when (phase) {
                 Phase.WAKE, Phase.LOCK, Phase.SLEEP -> petalA * (1f - zoom)
-                Phase.TO_HOME -> 1f - smooth((t - 0.13f) / 0.07f)
+                Phase.TO_HOME -> 1f - smooth((t - 0.15f) / 0.07f)
                 else -> 0f
+            }
+            // unlock: the lens swells into a water drop, then bursts outward while it fades
+            if (phase == Phase.TO_HOME) {
+                dropA = smooth(t / 0.14f)
+                lensScale = 1f + 0.6f * dropA + 0.35f * smooth((t - 0.15f) / 0.07f)
+            } else {
+                dropA = 0f
+                lensScale = 1f
             }
             waveT = if (phase == Phase.TO_HOME) t else -1f
         }
@@ -582,8 +592,9 @@ class ClockWallpaperService : WallpaperService() {
             val size = fxSize
             val cy = FP_Y + fxOffsetY
             return fx.effect(
-                w, h, ox + FP_X * k, oy + cy * k, FP_LENS_R * size * k, FP_RIM * k,
+                w, h, ox + FP_X * k, oy + cy * k, FP_LENS_R * size * lensScale * k, FP_RIM * k,
                 lensA.coerceIn(0f, 1f), wave, FP_STRIP * size * k, (SystemClock.uptimeMillis() % 600_000L) / 1000f,
+                dropA,
             )
         }
 
