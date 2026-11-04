@@ -116,6 +116,7 @@ float4 tint(float s) {
 
 // the wallpaper as seen through the wave at p
 float4 wave(float2 p) {
+    if (distA + blurA + colorA < 0.0005) return src(p);   // no wave running: one lookup
     float2 duv = (p - fp) / res;
     float d = length(duv);
     float2 dir = d > 0.00001 ? duv / d : float2(0.0, -1.0);
@@ -131,11 +132,13 @@ float4 wave(float2 p) {
     float len = blurA * inside * min(d, 0.5) * 0.10;
     float4 col;
     if (len * res.x > 0.75) {
+        // 6 jittered taps (per-pixel offset) look as smooth as 10 even ones at about half the cost
+        float jit = fract(52.9829189 * fract(dot(p, float2(0.06711056, 0.00583715))));
         float4 acc = float4(0.0);
-        for (int i = 0; i < 10; i++) {
-            acc += src(q - dpx * (len * float(i) / 9.0));
+        for (int i = 0; i < 6; i++) {
+            acc += src(q - dpx * (len * (float(i) + jit) / 6.0));
         }
-        col = acc * 0.1;
+        col = acc / 6.0;
     } else {
         col = src(q);
     }
@@ -214,11 +217,11 @@ half4 main(float2 p) {
     float a1 = (1.8 + 0.5 * sin(time * 1.1)) * calm;
     float a2 = (-1.1 + 0.4 * sin(time * 0.9 + 1.3)) * calm;
     float4 lc = float4(0.0);
-    for (int j = 0; j < 4; j++) {
-        float k = 1.0 - 0.12 * float(j);   // a few taps along the swirl smear the picture into streaks
+    for (int j = 0; j < 3; j++) {
+        float k = 1.0 - 0.16 * float(j);   // a few taps along the swirl smear the picture into streaks
         lc += wave(twirl(twirl(pl, c1, lensR * 0.62, a1 * k), c2, lensR * 0.5, a2 * k));
     }
-    lc *= 0.25;
+    lc *= 1.0 / 3.0;
     if (r > 0.6) {
         // chromatic aberration along and across the rim, strongest in the turning spots
         float z = smoothstep(0.6, 1.0, rc);
