@@ -13,3 +13,12 @@
 @media(prefers-reduced-motion:reduce){html{scroll-behavior:auto}.phone,.button,.demo-btn,.header-link svg{transition:none!important}.hero-orb{filter:blur(50px)}.clock-digit,.clock-digit *{animation:none!important}}
 
 .button-download{min-height:64px;padding:0 34px;font-size:17px;border-radius:18px;background:#fff;color:#06214f;box-shadow:0 0 0 4px rgba(255,255,255,.18),0 14px 36px rgba(0,0,0,.28)}.button-download svg{width:22px;height:22px}.button-download:hover{background:#d6f2ff}.brand-icon img{display:block;width:42px;height:42px}@media(max-width:600px){.button-download{width:100%;font-size:16px}.hero-buttons .button-download{min-height:60px;font-size:16px}.brand-icon img{width:37px;height:37px}}
+.support{max-width:520px;margin:0 0 22px;padding:22px 22px 18px;border:1px solid rgba(229,242,255,.24);border-radius:20px;background:rgba(255,255,255,.09);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px)}
+.support h3{display:flex;align-items:center;gap:10px;margin:0 0 12px;font:700 20px/1.2 var(--body);color:#fff}
+.support h3 svg{width:22px;height:22px;color:#75f1db;flex:none}
+.support p{margin:0 0 12px;font-size:15.5px;line-height:1.55;color:rgba(233,241,255,.88)}
+.support-button{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;margin-top:16px;padding:14px 18px;border-radius:14px;background:#0f8a45;color:#fff;font-weight:800;font-size:16px;text-decoration:none;transition:background .2s,transform .2s}
+.support-button:hover{background:#12a051;transform:translateY(-2px)}
+.support-button svg{width:20px;height:20px}
+.support .support-small{margin:14px 0 0;text-align:center;font-size:13.5px;color:rgba(233,241,255,.66)}
+
